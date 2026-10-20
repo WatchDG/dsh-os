@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { FALLBACK_ORDER, TOPICS, rulesOrder, rulesText, topicsPointer, wrapperFor } from '../lib/rules.js'
+import { FALLBACK_ORDER, TOPIC_FILES, contextTopicFiles, rulesOrder, rulesText, topicsPointer, wrapperFor } from '../lib/rules.js'
 
 test('Windows PowerShell rules forbid && and use $env:', () => {
   const text = rulesText({ os: 'windows', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
@@ -48,6 +48,7 @@ test('powershell rules check LASTEXITCODE and warn about 5.1 encodings', () => {
   assert.doesNotMatch(win, /\$\? -ne 0/)
   assert.match(win, /chcp 65001/)
   assert.match(win, /Out-File -Encoding utf8/)
+  assert.match(win, /ExecutionPolicy Bypass/)
 
   const nix = rulesText({ os: 'linux', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
   assert.match(nix, /\$LASTEXITCODE/)
@@ -59,34 +60,49 @@ test('cmd rules check ERRORLEVEL', () => {
   assert.match(text, /%ERRORLEVEL%/)
 })
 
-test('windows bullets name locks, py, reserved names, and managers', () => {
+test('windows bullets are directives for this context only', () => {
   const text = rulesText({ os: 'windows', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
-  assert.match(text, /locks open files/)
-  assert.match(text, /`py -3`/)
-  assert.doesNotMatch(text, /call `python3`/)
-  assert.match(text, /`CON`, `PRN`, `AUX`, `NUL`/)
-  assert.match(text, /winget/)
-  assert.match(text, /`apt`\/`brew` do not exist here/)
+  assert.match(text, /keep their case but compare case-insensitively/)
+  assert.match(text, /stop the process holding the file/)
+  assert.match(text, /Run Python as `py -3`/)
+  assert.match(text, /Do not create files named `CON`/)
+  assert.match(text, /Install tools with `winget`/)
+  assert.match(text, /cannot elevate itself/)
   assert.match(text, /start "" <path>/)
-  assert.match(text, /no `sudo` in a non-interactive call/)
+  assert.doesNotMatch(text, /python3/)
+  assert.doesNotMatch(text, /Linux/)
+  assert.doesNotMatch(text, /macOS/)
+  assert.doesNotMatch(text, /\bapt\b/)
+  assert.doesNotMatch(text, /brew/)
+  assert.doesNotMatch(text, /does not exist/)
+  assert.doesNotMatch(text, /rather than/)
 })
 
-test('linux bullets name case, managers, and xdg-open', () => {
+test('linux bullets are directives for this context only', () => {
   const text = rulesText({ os: 'linux', shell: 'bash', tool: 'bash', native: 'bash' })
   assert.match(text, /case-sensitive/)
-  assert.match(text, /`apt`, `dnf`, `pacman`/)
-  assert.match(text, /`brew`\/`winget` do not exist here/)
+  assert.match(text, /Install tools with the distro manager/)
+  assert.match(text, /Never run interactive `sudo`/)
   assert.match(text, /xdg-open/)
-  assert.match(text, /Never use interactive `sudo`/)
+  assert.doesNotMatch(text, /Windows/)
+  assert.doesNotMatch(text, /macOS/)
+  assert.doesNotMatch(text, /winget/)
+  assert.doesNotMatch(text, /brew/)
   assert.doesNotMatch(text, /`py -3`/)
+  assert.doesNotMatch(text, /does not exist/)
 })
 
-test('macos bullets name brew, quarantine, and open', () => {
+test('macos bullets are directives for this context only', () => {
   const text = rulesText({ os: 'macos', shell: 'zsh', tool: 'bash', native: 'bash' })
-  assert.match(text, /Homebrew/)
+  assert.match(text, /Homebrew \(`brew`\)/)
   assert.match(text, /xattr -d com\.apple\.quarantine/)
   assert.match(text, /with `open`/)
-  assert.match(text, /Never use interactive `sudo`/)
+  assert.match(text, /Never run interactive `sudo`/)
+  assert.doesNotMatch(text, /Windows/)
+  assert.doesNotMatch(text, /Linux/)
+  assert.doesNotMatch(text, /\bapt\b/)
+  assert.doesNotMatch(text, /winget/)
+  assert.doesNotMatch(text, /does not exist/)
 })
 
 test('null device follows the shell family', () => {
@@ -96,23 +112,58 @@ test('null device follows the shell family', () => {
   assert.match(rulesText({ os: 'macos', shell: 'zsh' }), /Discard output to `\/dev\/null`/)
 })
 
-test('every section ends with the topics pointer and the dialect bullet', () => {
-  for (const shell of ['powershell', 'cmd', 'bash', 'zsh', 'fish', 'sh']) {
-    const text = rulesText({ os: 'linux', shell, tool: 'bash', native: 'bash' })
-    assert.match(text, /Deeper notes live next to the plugin/, `${shell} pointer`)
-    for (const { slug } of TOPICS) {
-      assert.match(text, new RegExp(`${slug}\\.md`), `${shell} points at ${slug}.md`)
+test('the pointer names the resolved context and only its three files', () => {
+  const all = [
+    'os-windows.md',
+    'os-macos.md',
+    'os-linux.md',
+    'shell-powershell.md',
+    'shell-cmd.md',
+    'shell-bash.md',
+    'shell-zsh.md',
+    'shell-fish.md',
+    'shell-sh.md',
+    'commands-windows.md',
+    'commands-macos.md',
+    'commands-linux.md',
+  ]
+  const cases = [
+    { os: 'windows', shell: 'powershell' },
+    { os: 'windows', shell: 'cmd' },
+    { os: 'linux', shell: 'bash' },
+    { os: 'linux', shell: 'fish' },
+    { os: 'macos', shell: 'zsh' },
+  ]
+  const filePattern = (file) => new RegExp(file.replaceAll('.', '\\.'))
+  for (const { os, shell } of cases) {
+    const text = rulesText({ os, shell, tool: 'x', native: 'y' })
+    const pointer = text.split('\n').find((line) => line.startsWith('- Your context:'))
+    assert.ok(pointer, `${os}+${shell} pointer`)
+    const wanted = [`os-${os}.md`, `shell-${shell}.md`, `commands-${os}.md`]
+    for (const file of wanted) {
+      assert.match(pointer, filePattern(file), `${os}+${shell} points at ${file}`)
     }
-    assert.match(text, /do not switch dialects/, `${shell} closing bullet`)
+    for (const other of all) {
+      if (!wanted.includes(other)) {
+        assert.doesNotMatch(pointer, filePattern(other), `${os}+${shell} hides ${other}`)
+      }
+    }
+    assert.match(text, /do not switch dialects/, `${os}+${shell} closing bullet`)
   }
 })
 
-test('topicsPointer maps every topic to its file', () => {
-  const pointer = topicsPointer()
-  assert.match(pointer, /^-\s+Deeper notes/)
-  for (const { slug, about } of TOPICS) {
-    assert.match(pointer, new RegExp(`${slug}\\.md`), about)
-  }
+test('topicsPointer and contextTopicFiles agree on three files', () => {
+  assert.deepEqual(contextTopicFiles({ os: 'windows', shell: 'cmd' }), [
+    'os-windows.md',
+    'shell-cmd.md',
+    'commands-windows.md',
+  ])
+  const pointer = topicsPointer({ os: 'linux', shell: 'fish' })
+  assert.match(pointer, /Your context: \*\*Linux \+ fish\*\*/)
+  assert.match(pointer, /os-linux\.md/)
+  assert.match(pointer, /shell-fish\.md/)
+  assert.match(pointer, /commands-linux\.md/)
+  assert.equal(TOPIC_FILES.length, 12)
 })
 
 test('cmd and sh rules name their own syntax', () => {

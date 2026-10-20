@@ -76,12 +76,15 @@ is already running keeps the prompt it started with.
 
 ### 3. Topic files
 
-The core block stays short and ends with a pointer: each detail topic maps
-to a `topics/*.md` file next to the plugin (exit codes, python, filesystem,
-encoding, packages, commands, processes). The agent reads one with the
-harness `read` tool when its topic bites — the pointer carries the absolute
-path, resolved from the bundle location, so it works wherever the bundle
-is installed.
+The core block carries directives for the resolved context only — no
+comparisons, no foreign shells or package managers. It ends with a pointer
+that names the context (`Windows + PowerShell`) and exactly three detail
+files: `topics/os-<os>.md` (files, installs, console, locations),
+`topics/shell-<shell>.md` (exit codes, scripts, processes), and
+`topics/commands-<os>.md` (native equivalents). The agent reads one with
+the harness `read` tool when its topic bites — the pointer carries absolute
+paths, resolved from the bundle location, so it works wherever the bundle
+is installed, and the agent never sees other contexts.
 
 ## Auto-detection
 
@@ -181,7 +184,8 @@ lib/config.js         Config schema, defaults, normalization, live snapshot
 lib/env.js            pure OS/shell detection and environment resolution
 lib/rules.js          system-prompt rules text and section order
 lib/plugin.js         context wiring (prompt section + /os-shell/status settings route)
-topics/               on-demand detail files the core rules point at
+topics/               per-context packs the core rules point at
+                      (os-<os>.md, shell-<shell>.md, commands-<os>.md)
 test/                 node:test suites (env, rules, plugin, status, topics, manifest)
 ```
 

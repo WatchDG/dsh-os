@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-20
+
+### Changed
+
+- Core rules carry directives for the resolved context only: no cross-OS
+  comparisons, no foreign package managers or shells — just what and how
+  for this OS/shell pair.
+- Topic files are split by context (`os-<os>.md`, `shell-<shell>.md`,
+  `commands-<os>.md`, 12 files). The rules pointer names the resolved
+  context and its three files, so the agent reads only relevant notes.
+- `TOPICS` is replaced by `TOPIC_FILES` + `contextTopicFiles()`; the
+  previous per-theme files are removed.
+
+[1.2.0]: https://github.com/WatchDG/dsh-os/releases/tag/v1.2.0
+
 ## [1.1.0] - 2026-10-20
 
 ### Added

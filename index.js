@@ -70,5 +70,5 @@ export const inject = ['systemPrompt']
 // single-file layout (`harness-os`) keep working through this entry point.
 export { RULES_SECTION, OS_VALUES, SHELL_VALUES, normalizeConfig, snapshot } from './lib/config.js'
 export { detectOs, detectShell, shellTools, resolveEnvironment } from './lib/env.js'
-export { FALLBACK_ORDER, TOPICS, rulesOrder, rulesText, topicsPointer, wrapperFor } from './lib/rules.js'
+export { FALLBACK_ORDER, TOPIC_FILES, contextTopicFiles, rulesOrder, rulesText, topicsPointer, wrapperFor } from './lib/rules.js'
 export { STATUS_PATH, statusView, mount } from './lib/plugin.js'
