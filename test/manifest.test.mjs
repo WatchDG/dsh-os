@@ -17,6 +17,13 @@ const REQUIRED_FILES = [
   'lib/env.js',
   'lib/rules.js',
   'lib/plugin.js',
+  'topics/exit-codes.md',
+  'topics/python.md',
+  'topics/filesystem.md',
+  'topics/encoding.md',
+  'topics/packages.md',
+  'topics/commands.md',
+  'topics/processes.md',
   'cordis.patch.yml',
   'locale/en.json',
   'locale/ru.json',
@@ -47,6 +54,7 @@ test('every runtime file is shipped by npm', () => {
   assert.ok(pkg.files.includes('index.js'))
   assert.ok(pkg.files.includes('client.js'))
   assert.ok(pkg.files.includes('lib/*.js'))
+  assert.ok(pkg.files.includes('topics/*.md'))
   assert.ok(pkg.files.includes('cordis.patch.yml'))
   assert.ok(pkg.files.includes('locale/*.json'))
   assert.ok(pkg.files.includes('icon.svg'))

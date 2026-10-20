@@ -1,6 +1,6 @@
 {
   "name": "dsh-os",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "OS and shell awareness for DeepSeek Harness agents: detect the machine, switch the target OS and shell, and inject the matching terminal rules.",
@@ -39,6 +39,7 @@
     "index.js",
     "client.js",
     "lib/*.js",
+    "topics/*.md",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
@@ -49,7 +50,7 @@
   ],
   "scripts": {
     "test": "node --test",
-    "test:unit": "node --test test/env.test.mjs test/rules.test.mjs test/plugin.test.mjs test/status.test.mjs test/manifest.test.mjs",
+    "test:unit": "node --test test/env.test.mjs test/rules.test.mjs test/plugin.test.mjs test/status.test.mjs test/topics.test.mjs test/manifest.test.mjs",
     "pack:check": "npm pack --dry-run"
   },
   "dsh": {

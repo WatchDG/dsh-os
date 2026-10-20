@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { FALLBACK_ORDER, rulesOrder, rulesText, wrapperFor } from '../lib/rules.js'
+import { FALLBACK_ORDER, TOPICS, rulesOrder, rulesText, topicsPointer, wrapperFor } from '../lib/rules.js'
 
 test('Windows PowerShell rules forbid && and use $env:', () => {
   const text = rulesText({ os: 'windows', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
@@ -40,6 +40,79 @@ test('fish rules use set -x', () => {
   const text = rulesText({ os: 'linux', shell: 'fish', tool: 'bash', native: 'bash' })
   assert.match(text, /set -x NAME value/)
   assert.match(text, /fish -lc '<command>'/)
+})
+
+test('powershell rules check LASTEXITCODE and warn about 5.1 encodings', () => {
+  const win = rulesText({ os: 'windows', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
+  assert.match(win, /\$LASTEXITCODE/)
+  assert.doesNotMatch(win, /\$\? -ne 0/)
+  assert.match(win, /chcp 65001/)
+  assert.match(win, /Out-File -Encoding utf8/)
+
+  const nix = rulesText({ os: 'linux', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
+  assert.match(nix, /\$LASTEXITCODE/)
+  assert.doesNotMatch(nix, /chcp 65001/)
+})
+
+test('cmd rules check ERRORLEVEL', () => {
+  const text = rulesText({ os: 'windows', shell: 'cmd', tool: 'pwsh', native: 'powershell' })
+  assert.match(text, /%ERRORLEVEL%/)
+})
+
+test('windows bullets name locks, py, reserved names, and managers', () => {
+  const text = rulesText({ os: 'windows', shell: 'powershell', tool: 'pwsh', native: 'powershell' })
+  assert.match(text, /locks open files/)
+  assert.match(text, /`py -3`/)
+  assert.doesNotMatch(text, /call `python3`/)
+  assert.match(text, /`CON`, `PRN`, `AUX`, `NUL`/)
+  assert.match(text, /winget/)
+  assert.match(text, /`apt`\/`brew` do not exist here/)
+  assert.match(text, /start "" <path>/)
+  assert.match(text, /no `sudo` in a non-interactive call/)
+})
+
+test('linux bullets name case, managers, and xdg-open', () => {
+  const text = rulesText({ os: 'linux', shell: 'bash', tool: 'bash', native: 'bash' })
+  assert.match(text, /case-sensitive/)
+  assert.match(text, /`apt`, `dnf`, `pacman`/)
+  assert.match(text, /`brew`\/`winget` do not exist here/)
+  assert.match(text, /xdg-open/)
+  assert.match(text, /Never use interactive `sudo`/)
+  assert.doesNotMatch(text, /`py -3`/)
+})
+
+test('macos bullets name brew, quarantine, and open', () => {
+  const text = rulesText({ os: 'macos', shell: 'zsh', tool: 'bash', native: 'bash' })
+  assert.match(text, /Homebrew/)
+  assert.match(text, /xattr -d com\.apple\.quarantine/)
+  assert.match(text, /with `open`/)
+  assert.match(text, /Never use interactive `sudo`/)
+})
+
+test('null device follows the shell family', () => {
+  assert.match(rulesText({ os: 'windows', shell: 'powershell' }), /Discard output to `NUL`/)
+  assert.match(rulesText({ os: 'windows', shell: 'cmd' }), /Discard output to `NUL`/)
+  assert.match(rulesText({ os: 'linux', shell: 'bash' }), /Discard output to `\/dev\/null`/)
+  assert.match(rulesText({ os: 'macos', shell: 'zsh' }), /Discard output to `\/dev\/null`/)
+})
+
+test('every section ends with the topics pointer and the dialect bullet', () => {
+  for (const shell of ['powershell', 'cmd', 'bash', 'zsh', 'fish', 'sh']) {
+    const text = rulesText({ os: 'linux', shell, tool: 'bash', native: 'bash' })
+    assert.match(text, /Deeper notes live next to the plugin/, `${shell} pointer`)
+    for (const { slug } of TOPICS) {
+      assert.match(text, new RegExp(`${slug}\\.md`), `${shell} points at ${slug}.md`)
+    }
+    assert.match(text, /do not switch dialects/, `${shell} closing bullet`)
+  }
+})
+
+test('topicsPointer maps every topic to its file', () => {
+  const pointer = topicsPointer()
+  assert.match(pointer, /^-\s+Deeper notes/)
+  for (const { slug, about } of TOPICS) {
+    assert.match(pointer, new RegExp(`${slug}\\.md`), about)
+  }
 })
 
 test('cmd and sh rules name their own syntax', () => {
