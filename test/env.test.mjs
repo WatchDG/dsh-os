@@ -124,11 +124,22 @@ test('detectOs follows the host platform', () => {
 })
 
 test('detectShell prefers the registered shell tool', () => {
-  assert.equal(detectShell('windows', { pwsh: true, bash: false }), 'powershell')
-  assert.equal(detectShell('windows', { pwsh: false, bash: true }), 'bash')
-  assert.equal(detectShell('linux', { pwsh: true, bash: true }), 'powershell')
-  assert.equal(detectShell('linux', { pwsh: false, bash: false }), 'bash')
-  assert.equal(detectShell('macos', { pwsh: false, bash: false }), 'zsh')
+  assert.equal(detectShell('windows', { pwsh: true, bash: false }, {}), 'powershell')
+  assert.equal(detectShell('windows', { pwsh: false, bash: true }, {}), 'bash')
+  assert.equal(detectShell('linux', { pwsh: true, bash: true }, {}), 'powershell')
+  assert.equal(detectShell('linux', { pwsh: false, bash: false }, {}), 'bash')
+  assert.equal(detectShell('macos', { pwsh: false, bash: false }, {}), 'zsh')
+})
+
+test('detectShell falls back to $SHELL from the given environment', () => {
+  const tools = { pwsh: false, bash: false }
+  assert.equal(detectShell('linux', tools, { SHELL: '/bin/zsh' }), 'zsh')
+  assert.equal(detectShell('linux', tools, { SHELL: '/bin/fish' }), 'fish')
+  assert.equal(detectShell('macos', tools, { SHELL: '/bin/bash' }), 'bash')
+  assert.equal(detectShell('linux', tools, { SHELL: '/bin/false' }), 'bash')
+  assert.equal(detectShell('macos', tools, {}), 'zsh')
+  // Registered tools beat the environment.
+  assert.equal(detectShell('linux', { pwsh: true, bash: false }, { SHELL: '/bin/bash' }), 'powershell')
 })
 
 test('detectBashFlavor follows WSL markers on Windows only', () => {
