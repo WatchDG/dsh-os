@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "OS & Shell Rules",
+    "description": "Detects the operating system and shell, lets you override both, and gives agents the matching terminal syntax rules."
+  }
+}

@@ -1,0 +1,10 @@
+# OS and shell awareness for DeepSeek Harness.
+# Override this row in the profile's own patch layer to tune behavior, e.g.:
+#
+#   - id: os-shell
+#     config:
+#       os: windows            # auto (default) | windows | macos | linux
+#       shell: powershell      # auto (default) | powershell | cmd | bash | zsh | fish | sh
+- insert:
+    - id: os-shell
+      name: dsh-os
