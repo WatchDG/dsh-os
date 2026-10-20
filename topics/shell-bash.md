@@ -2,6 +2,15 @@
 
 Read this when the rules name bash as the shell.
 
+## Flavors
+
+- The pointer names the flavor: Git Bash, WSL, or native. Git Bash and WSL
+  disagree on drive paths (`/c/...` vs `/mnt/c/...`) and on when `.exe`
+  is needed — never copy a path from one to the other.
+- An explicit `bashFlavor` setting wins; `auto` follows WSL markers
+  (`WSL_DISTRO_NAME` / `WSL_INTEROP`) and assumes Git Bash on Windows
+  otherwise.
+
 ## Exit codes
 
 - The code is `$?`; save it first when later lines need it: `prog; code=$?`.

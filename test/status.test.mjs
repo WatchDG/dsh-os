@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 import { STATUS_PATH, mount, statusView } from '../lib/plugin.js'
-import { apply, detectOs, detectShell } from '../index.js'
+import { apply, detectBashFlavor, detectOs, detectShell } from '../index.js'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const read = (relative) => readFileSync(path.join(root, relative), 'utf8')
@@ -89,20 +89,38 @@ test('statusView reports detection, the targeted pair, and its source', () => {
   const view = statusView(config, {
     os: 'windows',
     shell: 'bash',
+    bashFlavor: 'git-bash',
+    location: 'local',
+    powershellEdition: 'auto',
     tool: 'pwsh',
     native: 'powershell',
+    tools: { pwsh: true, bash: false },
     detectedOs: 'windows',
     detectedShell: 'powershell',
+    detectedBashFlavor: 'git-bash',
   })
-  assert.deepEqual(view.detected, { os: 'windows', shell: 'powershell' })
-  assert.deepEqual(view.target, { os: 'windows', shell: 'bash' })
+  assert.deepEqual(view.detected, { os: 'windows', shell: 'powershell', bashFlavor: 'git-bash' })
+  assert.deepEqual(view.target, {
+    os: 'windows',
+    shell: 'bash',
+    bashFlavor: 'git-bash',
+    location: 'local',
+    powershellEdition: 'auto',
+  })
   assert.equal(view.tool, 'pwsh')
   assert.equal(view.source, 'agent')
+  assert.match(view.preview, /## Terminal environment/)
+  assert.equal(view.example, 'ls -la')
+  assert.equal(view.wrapper, 'bash -lc \'<command>\'')
+  assert.deepEqual(view.tools, { pwsh: true, bash: false })
+  assert.equal(typeof view.shellEnv, 'string')
 
   const fallback = statusView({ os: { get: () => 'auto' }, shell: { get: () => 'auto' } }, undefined)
   assert.equal(fallback.source, 'host')
   assert.equal(fallback.detected.os, detectOs())
-  assert.deepEqual(fallback.target, fallback.detected)
+  assert.deepEqual(fallback.target.os, fallback.detected.os)
+  assert.deepEqual(fallback.target.shell, fallback.detected.shell)
+  assert.match(fallback.preview, /## Terminal environment/)
 })
 
 test('the status route answers the settings page', async () => {
@@ -117,10 +135,15 @@ test('the status route answers the settings page', async () => {
   assert.equal(ok.statusCode, 200)
   assert.match(ok.headers['content-type'], /application\/json/)
   const payload = ok.body
-  assert.deepEqual(payload.detected, { os: detectOs(), shell: 'powershell' })
-  assert.deepEqual(payload.target, { os: detectOs(), shell: 'powershell' })
+  assert.deepEqual(payload.detected, { os: detectOs(), shell: 'powershell', bashFlavor: detectBashFlavor(detectOs()) })
+  assert.deepEqual(payload.target.os, detectOs())
+  assert.deepEqual(payload.target.shell, 'powershell')
   assert.equal(payload.tool, 'pwsh')
   assert.equal(payload.source, 'agent')
+  assert.match(payload.preview, /## Terminal environment/)
+  assert.equal(payload.example, 'Get-ChildItem')
+  assert.equal(payload.wrapper, null)
+  assert.deepEqual(payload.tools, { pwsh: true, bash: false })
 
   const wrongMethod = await exchange(route, { method: 'POST' })
   assert.equal(wrongMethod.statusCode, 405)
@@ -169,4 +192,8 @@ test('the web client registers the Terminal section and the status channel', () 
   assert.match(client, /os-shell: settings page/)
   assert.match(client, /whileServed/)
   assert.match(client, /configForms/)
+  assert.match(client, /bashFlavor/)
+  assert.match(client, /powershellEdition/)
+  assert.match(client, /preview/)
+  assert.match(client, /ossh-pre/)
 })

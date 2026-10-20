@@ -13,6 +13,7 @@ const pkg = JSON.parse(read('package.json'))
 const REQUIRED_FILES = [
   'index.js',
   'client.js',
+  'preview.mjs',
   'lib/config.js',
   'lib/env.js',
   'lib/rules.js',
@@ -29,6 +30,8 @@ const REQUIRED_FILES = [
   'topics/commands-windows.md',
   'topics/commands-macos.md',
   'topics/commands-linux.md',
+  'topics/ssh.md',
+  'topics/anti-patterns.md',
   'cordis.patch.yml',
   'locale/en.json',
   'locale/ru.json',
@@ -58,6 +61,7 @@ test('manifest declares a DSH bundle', () => {
 test('every runtime file is shipped by npm', () => {
   assert.ok(pkg.files.includes('index.js'))
   assert.ok(pkg.files.includes('client.js'))
+  assert.ok(pkg.files.includes('preview.mjs'))
   assert.ok(pkg.files.includes('lib/*.js'))
   assert.ok(pkg.files.includes('topics/*.md'))
   assert.ok(pkg.files.includes('cordis.patch.yml'))

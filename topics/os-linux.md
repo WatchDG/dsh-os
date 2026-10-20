@@ -13,6 +13,9 @@ Read this when the rules name Linux as the OS.
   hardcoded user names.
 - Links are ordinary: `ln -s target link`. Mark scripts executable
   (`chmod +x`) and start them with a shebang (`#!/usr/bin/env bash`).
+- Line endings are LF: CRLF checkouts break shebangs — enforce
+  `*.sh text eol=lf` in `.gitattributes` and re-check out when a script
+  fails with a stray `\r`.
 
 ## Install and elevation
 

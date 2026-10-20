@@ -37,7 +37,8 @@
  * lib/env.js     pure OS/shell detection and environment resolution
  * lib/rules.js   system-prompt rules text and section order
  * lib/plugin.js  context wiring (prompt section + /os-shell/status settings route)
- * test/          node:test suites (env, rules, plugin, status, manifest)
+ * preview.mjs    CLI preview of the resolved rules without a running Harness
+ * test/          node:test suites (env, rules, plugin, status, topics, manifest)
  * ```
  */
 
@@ -68,7 +69,7 @@ export const inject = ['systemPrompt']
 
 // Re-exported helpers (moved to lib/): existing imports from the previous
 // single-file layout (`harness-os`) keep working through this entry point.
-export { RULES_SECTION, OS_VALUES, SHELL_VALUES, normalizeConfig, snapshot } from './lib/config.js'
-export { detectOs, detectShell, shellTools, resolveEnvironment } from './lib/env.js'
-export { FALLBACK_ORDER, TOPIC_FILES, contextTopicFiles, rulesOrder, rulesText, topicsPointer, wrapperFor } from './lib/rules.js'
+export { RULES_SECTION, OS_VALUES, SHELL_VALUES, BASH_FLAVOR_VALUES, LOCATION_VALUES, POWERSHELL_EDITION_VALUES, normalizeConfig, snapshot } from './lib/config.js'
+export { detectOs, detectShell, detectBashFlavor, shellTools, resolveEnvironment } from './lib/env.js'
+export { FALLBACK_ORDER, TOPIC_FILES, contextTopicFiles, rulesOrder, rulesText, topicsPointer, wrapperFor, exampleCommand } from './lib/rules.js'
 export { STATUS_PATH, statusView, mount } from './lib/plugin.js'

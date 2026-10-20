@@ -56,19 +56,31 @@ tools' own guidance (`tool:pwsh` / `tool:bash`). It tells the model:
 - how to reach another shell when the selected one differs from the tool
   (`cmd /c "…"`, `bash -lc '…'`, `pwsh -NoProfile -Command '…'`);
 - how to check exit codes (`$LASTEXITCODE`, `%ERRORLEVEL%`);
-- OS traps: file locks and reserved names on Windows, case-sensitivity,
-  the right package manager, `py` vs `python3`, `start` / `open` /
-  `xdg-open`, `NUL` vs `/dev/null`, and 5.1 encoding pitfalls.
+- OS traps: file locks and reserved names on Windows, OneDrive/Defender locks,
+  CRLF vs LF line endings (`.gitattributes`), lost executable bits (`chmod +x`),
+  symlinks, case-sensitivity, the right package manager, `py` vs `python3`,
+  `start` / `open` / `xdg-open`, `NUL` vs `/dev/null`, and 5.1 encoding pitfalls.
+- which bash flavor the paths follow on Windows (Git Bash `/c/...` vs WSL `/mnt/c/...`);
+- that a `remote` connection describes the SSH side, not this Host;
+- a pointer to the global POSIX → native anti-patterns table.
 
-### 2. Switches and detection
+### 2. Switches, detection, and preview
 
 **Settings → Terminal** shows:
 
 - a card "Detected on this Host: Windows · PowerShell" — what auto-detection
-  actually sees, plus the tool (`pwsh`) the shell came from;
+  actually sees, plus the tool (`pwsh`) the shell came from, the detected bash
+  flavor, the Host `$SHELL`/`ComSpec`, the agent's shell tools (`pwsh`/`bash`),
+  and the wrapper template when the selected shell differs from the tool;
+- a remote badge when the rules describe an SSH machine instead of this Host;
 - when your selection differs from detection, a separate line showing what the
   rules currently use;
-- two lists: the operating system and the shell.
+- five lists: the operating system, the shell, the bash flavor (Windows bash
+  only), the connection (`local` or remote over SSH), and the PowerShell
+  edition (`auto` stays 5.1-safe, `7` unlocks `&&`/`||` notes);
+- a read-only preview of the exact `os-shell:rules` text the agent will see
+  (served by the same `GET /os-shell/status` route, with a copy button and a
+  working example command for the pair).
 
 Both fields are *volatile* Config: a write applies in place, without
 reloading the plugin, and takes effect from the next model step. A step that
@@ -78,13 +90,16 @@ is already running keeps the prompt it started with.
 
 The core block carries directives for the resolved context only — no
 comparisons, no foreign shells or package managers. It ends with a pointer
-that names the context (`Windows + PowerShell`) and exactly three detail
-files: `topics/os-<os>.md` (files, installs, console, locations),
-`topics/shell-<shell>.md` (exit codes, scripts, processes), and
-`topics/commands-<os>.md` (native equivalents). The agent reads one with
-the harness `read` tool when its topic bites — the pointer carries absolute
-paths, resolved from the bundle location, so it works wherever the bundle
-is installed, and the agent never sees other contexts.
+that names the context (`Windows + PowerShell`, or `Windows + bash (WSL)` when
+a flavor applies) and its detail files: `topics/os-<os>.md` (files, installs,
+console, locations), `topics/shell-<shell>.md` (exit codes, scripts,
+processes), `topics/commands-<os>.md` (native equivalents), plus
+`topics/ssh.md` for remote sessions. A second link always points at the
+global `topics/anti-patterns.md` table (POSIX habit → what each shell
+actually accepts). The agent reads one with the harness `read` tool when its
+topic bites — the pointer carries absolute paths, resolved from the bundle
+location, so it works wherever the bundle is installed, and the agent never
+sees other contexts.
 
 ## Auto-detection
 
@@ -96,7 +111,15 @@ is installed, and the agent never sees other contexts.
   `$SHELL` is used on POSIX (`zsh` by default on macOS, `bash` on Linux) and
   PowerShell on Windows.
 
-`auto` in both fields enables this detection. An explicit choice wins.
+- **Bash flavor (Windows only)** — WSL markers in the environment
+  (`WSL_DISTRO_NAME` / `WSL_INTEROP`) mean WSL (`/mnt/c/...`), anything else
+  means Git Bash (`/c/...`). No processes are started to check. Outside
+  Windows the flavor is always `native`.
+
+`auto` in the `os`, `shell`, `bashFlavor`, and `powershellEdition` fields
+enables this detection. An explicit choice wins. `location` defaults to
+`local`; pick `remote` when the commands run on another machine over SSH —
+the rules then describe the remote side, not this Host.
 
 Detection for the page comes from the latest prompt assembly — that is where
 the agent's scope and its tools are known. Before the first assembly the page
@@ -117,18 +140,26 @@ callers get 401).
 |---|---|---|
 | `os` | `auto`, `windows`, `macos`, `linux` | `auto` |
 | `shell` | `auto`, `powershell`, `cmd`, `bash`, `zsh`, `fish`, `sh` | `auto` |
+| `bashFlavor` | `auto`, `git-bash`, `wsl`, `native` | `auto` |
+| `location` | `local`, `remote` | `local` |
+| `powershellEdition` | `auto`, `5.1`, `7` | `auto` |
 
-Both fields are also available in the profile patch layer (row `id: os-shell`):
+All fields are also available in the profile patch layer (row `id: os-shell`):
 
 ```yaml
 - id: os-shell
   config:
     os: windows
-    shell: powershell
+    shell: bash
+    bashFlavor: wsl
+    location: local
+    powershellEdition: auto
 ```
 
-`powershell` covers both Windows PowerShell 5.1 and PowerShell 7 with rules
-that are safe on 5.1: `&&`/`||` are never used, chaining goes through `;`.
+`powershell` covers both Windows PowerShell 5.1 and PowerShell 7. With
+`powershellEdition: auto` (or `5.1`) the rules stay safe on 5.1: `&&`/`||`
+are forbidden, chaining goes through `;`. Pick `7` only when the target is
+known to run PowerShell 7+.
 
 ## Verification
 
@@ -136,7 +167,9 @@ that are safe on 5.1: `&&`/`||` are never used, chaining goes through `;`.
    **OS & Shell Rules** / **Правила ОС и оболочки**, and it is enabled.
 2. **Settings → Terminal** is served in the live `settings.section` slot
    (`id: os-shell`, `order: 17`, `active: true`) — the Host serves the
-   namespace and the settings form is connected.
+   namespace and the settings form is connected. The page shows the detection
+   card, the five selects, and the read-only preview of the exact rules text
+   with a copy button and an example command.
 3. In a new session, ask a subagent to quote the prompt: the first paragraph
    of `## Terminal environment` names the tool (`through the `pwsh` tool`) —
    shell detection by the agent's tooling (scope) works, not by the global
@@ -146,9 +179,14 @@ that are safe on 5.1: `&&`/`||` are never used, chaining goes through `;`.
 5. `GET /os-shell/status` is registered and protected: a `POST` to it without
    browser authentication gets 401 from the shared trust-fence, while the same
    `POST` to a nonexistent path falls into the SPA fallback and gets 405 —
-   the route exists and answers itself.
-6. `npm test` — unit checks for the Config schema, detection, wrappers, rules
-   text, settings ownership, and the status route, plus manifest checks.
+   the route exists and answers itself. The payload also carries `preview`,
+   `example`, `wrapper`, `tools`, and the detected/targeted flavor, location,
+   and edition.
+6. `npm test` — unit checks for the Config schema, detection, flavor,
+   wrappers, rules text, settings ownership, and the status route, plus
+   manifest checks.
+7. `npm run preview -- --os windows --shell bash --bash-flavor wsl` prints
+   the resolved section to stdout without a running Harness.
 
 The card was verified by inspection plus the protected route; saving by click
 was not driven from this session (no browser control here). Saving goes
@@ -159,7 +197,8 @@ settings page uses.
 
 | Symptom | Cause / fix |
 |---|---|
-| The rules mention the wrong shell | The page card shows the source: `host` before the first agent step, `agent` after. Check which tools the agent has (`pwsh` wins over `bash`). |
+| The rules mention the wrong shell | The page card shows the source: `host` before the first agent step, `agent` after. Check which tools the agent has (`pwsh` wins over `bash`). For `windows + bash`, check the flavor line: Git Bash and WSL disagree on drive paths. |
+| The rules describe the wrong machine | The location may be `remote`: the rules then describe the SSH side on purpose. Flip it back to `local` for this Host. |
 | A selection does not apply | Writes are volatile and apply from the next model step; a running step keeps its prompt. Toggle the bundle row if the Host JS was edited. |
 | No Terminal page | The Host serves the namespace only while the bundle row is enabled; check the Plugins page and restart DSH after updating files. |
 
@@ -172,6 +211,7 @@ build step.
 npm ci                   # install the settings schema library
 npm test                 # unit tests + manifest checks
 npm run test:unit        # same suites, explicit list
+npm run preview -- --os windows --shell bash --bash-flavor wsl
 npm run pack:check       # verify the npm package contents
 ```
 
@@ -179,13 +219,14 @@ Layout:
 
 ```
 index.js              Host entry point: exports apply / name / inject / Config
-client.js             Settings → Terminal page: detection card and the os/shell form (web client)
+client.js             Settings → Terminal page: detection card, selects, rules preview (web client)
+preview.mjs           CLI preview of the resolved rules without a running Harness
 lib/config.js         Config schema, defaults, normalization, live snapshot
-lib/env.js            pure OS/shell detection and environment resolution
+lib/env.js            pure OS/shell/flavor detection and environment resolution
 lib/rules.js          system-prompt rules text and section order
 lib/plugin.js         context wiring (prompt section + /os-shell/status settings route)
 topics/               per-context packs the core rules point at
-                      (os-<os>.md, shell-<shell>.md, commands-<os>.md)
+                      (os-<os>.md, shell-<shell>.md, commands-<os>.md, ssh.md, anti-patterns.md)
 test/                 node:test suites (env, rules, plugin, status, topics, manifest)
 ```
 

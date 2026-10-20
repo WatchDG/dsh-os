@@ -3,8 +3,11 @@
 #
 #   - id: os-shell
 #     config:
-#       os: windows            # auto (default) | windows | macos | linux
-#       shell: powershell      # auto (default) | powershell | cmd | bash | zsh | fish | sh
+#       os: windows                  # auto (default) | windows | macos | linux
+#       shell: powershell            # auto (default) | powershell | cmd | bash | zsh | fish | sh
+#       bashFlavor: wsl              # auto (default) | git-bash | wsl | native (bash on Windows only)
+#       location: remote             # local (default) | remote (commands run over SSH)
+#       powershellEdition: '7'       # auto (default, 5.1-safe) | 5.1 | 7
 - insert:
     - id: os-shell
       name: dsh-os

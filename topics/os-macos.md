@@ -10,6 +10,10 @@ Read this when the rules name macOS as the OS.
   (fallback `/tmp`).
 - Per-user configs live in `~/.config` or `~/Library/Application Support`.
   Prefer `$HOME`-based paths over hardcoded user names.
+- Line endings are LF: when a script from a CRLF checkout fails, set
+  `*.sh text eol=lf` in `.gitattributes` and re-check out.
+- Symlinks are ordinary (`ln -s target link`); keep them relative so
+  clones elsewhere survive.
 
 ## Install and gates
 

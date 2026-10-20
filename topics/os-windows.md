@@ -7,8 +7,14 @@ Read this when the rules name Windows as the OS.
 - Names keep their case but compare case-insensitively. Git still tracks
   case: a case-only rename needs `git mv Old new`.
 - A delete or overwrite failing with “access denied” means a process holds
-  the file: stop the holder, then retry once. Retrying the same call never
-  helps.
+  the file: stop the holder, then retry once. OneDrive/Dropbox sync and
+  Defender real-time scanning lock files too — pause sync or move the
+  workdir out before retrying. Retrying the same call never helps.
+- Checkouts are often CRLF while shell scripts need LF: enforce
+  `* text=auto` and `*.sh text eol=lf` in `.gitattributes`.
+- Checkouts drop the executable bit: run `bash script.sh`, or restore it
+  with `git update-index --chmod=+x`, when `./script.sh` reports
+  permission denied.
 - Never create `CON PRN AUX NUL COM1–COM9 LPT1–LPT9`, with any extension.
 - Keep paths under ~260 chars unless long-path support is enabled; clone
   repos near the drive root.
