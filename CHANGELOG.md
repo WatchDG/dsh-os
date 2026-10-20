@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-10-20
+
+### Fixed
+
+- `detectShell()` now takes the environment as an optional third parameter
+  (defaulting to `process.env`), and the tests inject it explicitly. The
+  macOS-fallback assertion no longer reads the real `$SHELL`, so the suite
+  is green on Linux CI runners where `SHELL=/bin/bash` is always set. No
+  behavior change for callers.
+
+[1.3.1]: https://github.com/WatchDG/dsh-os/releases/tag/v1.3.1
+
 ## [1.3.0] - 2026-10-20
 
 ### Added
